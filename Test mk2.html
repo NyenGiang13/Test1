@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Checker Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #eef2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 380px;
+        }
+        h2 { margin: 0 0 10px; color: #2d3436; }
+        .author { font-size: 0.8rem; color: #636e72; margin-bottom: 20px; }
+        
+        /* Container cho input và icon */
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        input {
+            width: 100%;
+            padding: 12px 45px 12px 12px; /* Chừa khoảng trống bên phải cho icon */
+            border: 2px solid #dfe6e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus { border-color: #74b9ff; }
+
+        /* Style cho icon mắt */
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 1.2rem;
+            color: #636e72;
+        }
+
+        .meter-container { margin: 20px 0 10px; }
+        .meter-bar {
+            height: 6px;
+            background: #dfe6e9;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.4s ease;
+        }
+        
+        .status-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Test mật khẩu</h2>
+    <div class="author">nhập mật khẩu ở ô dưới</div>
+    
+    <div class="input-group">
+        <input type="password" id="password" placeholder="Nhập mật khẩu..." oninput="checkStrength()">
+        <span class="toggle-password" onclick="toggleView()" id="eye-icon">🔒️</span>
+    </div>
+
+    <div class="meter-container">
+        <div class="meter-bar">
+            <div id="fill" class="meter-fill"></div>
+        </div>
+    </div>
+    
+    <div class="status-text">
+        <span>Độ mạnh:</span>
+        <span id="label">Trống</span>
+    </div>
+</div>
+
+<script>
+    // Hàm ẩn hiện mật khẩu
+    function toggleView() {
+        const passwordInput = document.getElementById("password");
+        const eyeIcon = document.getElementById("eye-icon");
+        
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            eyeIcon.innerText = "👁"; // Đổi icon khi hiện
+        } else {
+            passwordInput.type = "password";
+            eyeIcon.innerText = "🔒️"; // Đổi icon khi ẩn
+        }
+    }
+
+    // Logic kiểm tra độ mạnh (đã gộp từ bước trước)
+    function checkStrength() {
+        const val = document.getElementById("password").value;
+        const fill = document.getElementById("fill");
+        const label = document.getElementById("label");
+        
+        let score = 0;
+        if (!val) {
+            label.innerText = "Trống";
+            fill.style.width = "0%";
+            return;
+        }
+
+        if (val.length >= 8) score += 1;
+        if (val.length >= 12) score += 1;
+        if (val.length >= 16) score += 1;
+        if (/[A-Z]/.test(val)) score += 1;
+        if (/[a-z]/.test(val)) score += 1;
+        if (/\d/.test(val)) score += 1;
+        if (/[^A-Za-z0-9]/.test(val)) score += 1;
+
+        let percentage = (score / 7) * 100;
+        fill.style.width = percentage + "%";
+
+        if (score <= 2) {
+            label.innerText = "Yếu";
+            label.style.color = "#ff7675";
+            fill.style.background = "#ff7675";
+        } else if (score <= 5) {
+            label.innerText = "Vừa";
+            label.style.color = "#fdcb6e";
+            fill.style.background = "#fdcb6e";
+        } else {
+            label.innerText = "Mạnh";
+            label.style.color = "#55efc4";
+            fill.style.background = "#55efc4";
+        }
+    }
+</script>
+
+</body>
+</html>
