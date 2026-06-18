@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Tạo Chuỗi Ngẫu Nhiên</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 12px; /* Thu nhỏ padding ngoài viền để ôm sát màn hình nhỏ tốt hơn */
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 480px; /* Độ rộng lý tưởng để vừa vặn đẹp mắt trên cả PC lẫn Mobile */
+            margin: 0 auto;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+        }
+
+        /* Khu vực hiển thị kết quả: Tối ưu tự thích ứng bề ngang */
+        .result-container {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 8px;
+            width: 100%;
+        }
+
+        #result {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #f9fafb;
+            font-family: monospace;
+            word-break: break-all; /* Ép xuống dòng khi chuỗi ngẫu nhiên dài vượt màn hình */
+            white-space: pre-wrap;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-copy {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 0 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            flex-shrink: 0; /* Giữ nguyên kích thước nút sao chép không bị bóp méo */
+        }
+
+        .btn-copy:hover {
+            background-color: #059669;
+        }
+
+        /* Giao diện các Switch (Nút gạt) */
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .switch-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            gap: 10px;
+        }
+
+        .switch-label-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* Tự động co giãn phần text mô tả */
+        }
+
+        .note {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 3px;
+            line-height: 1.4;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+            flex-shrink: 0; /* Không cho switch bị bóp méo khi màn hình quá nhỏ */
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Giao diện Checkbox (Ô tích) */
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .checkbox-item input {
+            margin-top: 3px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .warning-text {
+            color: #d97706;
+            font-weight: bold;
+        }
+
+        /* Ô nhập độ dài */
+        .length-group {
+            margin: 15px 0 20px 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .length-group.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .length-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .length-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: #fff;
+            -webkit-appearance: none; /* Xóa style mặc định trên iOS Safari */
+        }
+        
+        .length-group.disabled input {
+            background-color: #e5e7eb;
+        }
+
+        /* Nút tạo kết quả */
+        .btn-generate {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-generate:hover {
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Trình Tạo Chuỗi Ngẫu Nhiên</h2>
+
+    <div class="result-container">
+        <div id="result"></div>
+        <button class="btn-copy" onclick="copyToClipboard()">Sao chép</button>
+    </div>
+
+    <div class="control-group">
+        <div class="switch-item">
+            <div class="switch-label-group">
+                <strong>Chỉ chứa chữ (A-Z, a-z)</strong>
+                <span class="note">Chú thích: Khi bật, kết quả sẽ chứa chữ cái. Nếu kết hợp các switch khác, điều kiện sẽ trộn lẫn.</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="sw-letters" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-item">
+            <div class="switch-label-group">
+                <strong>Chỉ chứa số (0-9)</strong>
+                <span class="note">Chú thích: Khi bật, kết quả sẽ chứa chữ số. Nếu kết hợp các switch khác, điều kiện sẽ trộn lẫn.</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="sw-numbers">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-item">
+            <div class="switch-label-group">
+                <strong>Chỉ chứa ký tự đặc biệt</strong>
+                <span class="note">Chú thích: Khi bật, kết quả sẽ chứa các ký tự không phải số/chữ (ví dụ: @, #, $, ...).</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="sw-special">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-item" style="border-top: 1px dashed var(--border-color); margin-top: 6px; padding-top: 12px;">
+            <div class="switch-label-group">
+                <strong>Giới hạn cố định số ký tự</strong>
+                <span class="note">Chú thích: Nếu <b>Bật</b>, làm đúng số lượng ở dưới. Nếu <b>Tắt</b>, độ dài chuỗi sẽ dài ngắn ngẫu nhiên từ 5 đến 50 ký tự.</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="sw-limit-length" checked onchange="toggleLengthInput()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+
+    <div class="control-group">
+        <div class="checkbox-item">
+            <input type="checkbox" id="chk-vietnamese">
+            <div class="switch-label-group">
+                <label for="chk-vietnamese"><strong>Thêm ký tự tiếng Việt</strong></label>
+                <span class="note">Chú thích: Bổ sung chữ cái có dấu (á, à, ả...) vào tập hợp (chỉ có tác dụng khi Switch chữ bật).</span>
+            </div>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" id="chk-unique">
+            <div class="switch-label-group">
+                <label for="chk-unique"><strong>Các ký tự không trùng lặp</strong></label>
+                <span class="note">Chú thích: Mỗi ký tự xuất hiện tối đa 1 lần. <span class="warning-text">Cảnh báo: Nếu kho ký tự ít hơn độ dài yêu cầu, kết quả sẽ KHÔNG ĐỦ số ký tự muốn tạo!</span></span>
+            </div>
+        </div>
+
+        <div class="checkbox-item" style="border-top: 1px dotted var(--border-color); margin-top: 6px; padding-top: 12px;">
+            <input type="checkbox" id="chk-lowercase" onchange="handleCaseSelection('lower')">
+            <div class="switch-label-group">
+                <label for="chk-lowercase"><strong>Chữ viết thường hoàn toàn (a-z)</strong></label>
+                <span class="note">Chú thích: Ép toàn bộ ký tự chữ cái trong chuỗi sang dạng viết thường.</span>
+            </div>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" id="chk-uppercase" onchange="handleCaseSelection('upper')">
+            <div class="switch-label-group">
+                <label for="chk-uppercase"><strong>Chữ viết hoa hoàn toàn (A-Z)</strong></label>
+                <span class="note">Chú thích: Ép toàn bộ ký tự chữ cái trong chuỗi sang dạng viết hoa. Nếu tắt cả 2 ô, chuỗi sẽ tự động trộn lẫn hoa-thường.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="length-group" id="length-input-container">
+        <label for="char-length">Số ký tự được phép tạo:</label>
+        <input type="number" id="char-length" value="10" min="1" max="1000">
+    </div>
+
+    <button class="btn-generate" onclick="generateRandomString()">TẠO NGẪU NHIÊN</button>
+</div>
+
+<script>
+    function handleCaseSelection(type) {
+        const chkLower = document.getElementById('chk-lowercase');
+        const chkUpper = document.getElementById('chk-uppercase');
+
+        if (type === 'lower' && chkLower.checked) {
+            chkUpper.checked = false;
+        } else if (type === 'upper' && chkUpper.checked) {
+            chkLower.checked = false;
+        }
+    }
+
+    function toggleLengthInput() {
+        const isLimitEnabled = document.getElementById('sw-limit-length').checked;
+        const container = document.getElementById('length-input-container');
+        const input = document.getElementById('char-length');
+        
+        if (isLimitEnabled) {
+            container.classList.remove('disabled');
+            input.removeAttribute('disabled');
+        } else {
+            container.classList.add('disabled');
+            input.setAttribute('disabled', 'true');
+        }
+    }
+
+    function copyToClipboard() {
+        const resultText = document.getElementById('result').innerText;
+        if (!resultText) {
+            alert('Chưa có kết quả nào để sao chép!');
+            return;
+        }
+        
+        navigator.clipboard.writeText(resultText).then(() => {
+            alert('Đã sao chép vào bộ nhớ tạm!');
+        }).catch(err => {
+            alert('Lỗi khi sao chép: ' + err);
+        });
+    }
+
+    function generateRandomString() {
+        const swLetters = document.getElementById('sw-letters').checked;
+        const swNumbers = document.getElementById('sw-numbers').checked;
+        const swSpecial = document.getElementById('sw-special').checked;
+        const swLimitLength = document.getElementById('sw-limit-length').checked;
+        
+        const chkVietnamese = document.getElementById('chk-vietnamese').checked;
+        const chkUnique = document.getElementById('chk-unique').checked;
+        const chkLower = document.getElementById('chk-lowercase').checked;
+        const chkUpper = document.getElementById('chk-uppercase').checked;
+        
+        const lengthInput = document.getElementById('char-length');
+        let length;
+
+        if (swLimitLength) {
+            length = parseInt(lengthInput.value);
+            if (isNaN(length) || length <= 0) {
+                alert('Vui lòng nhập số lượng ký tự hợp lệ lớn hơn 0.');
+                return;
+            }
+        } else {
+            length = Math.floor(Math.random() * (50 - 5 + 1)) + 5;
+        }
+
+        let lowerLetters = 'abcdefghijklmnopqrstuvwxyz';
+        let upperLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let viLower = 'áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ';
+        let viUpper = 'ÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸYĐ';
+
+        if (chkVietnamese) {
+            lowerLetters += viLower;
+            upperLetters += viUpper;
+        }
+
+        let lettersPool = '';
+        if (chkLower) {
+            lettersPool = lowerLetters;
+        } else if (chkUpper) {
+            lettersPool = upperLetters;
+        } else {
+            lettersPool = lowerLetters + upperLetters;
+        }
+
+        const numbersPool = '0123456789';
+        const specialPool = '!@#$%^&*()_+-=[]{}|;:\'",.<>/?~`';
+
+        let finalPool = '';
+        if (swLetters) finalPool += lettersPool;
+        if (swNumbers) finalPool += numbersPool;
+        if (swSpecial) finalPool += specialPool;
+
+        if (finalPool === '') {
+            alert('Bạn phải bật ít nhất 1 trong 3 Switch nội dung (Chữ, Số, Ký tự đặc biệt)!');
+            document.getElementById('result').innerText = '';
+            return;
+        }
+
+        let result = '';
+        
+        if (chkUnique) {
+            let poolArray = Array.from(finalPool);
+            if (length > poolArray.length) {
+                length = poolArray.length;
+            }
+
+            for (let i = 0; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * poolArray.length);
+                result += poolArray[randomIndex];
+                poolArray.splice(randomIndex, 1);
+            }
+        } else {
+            for (let i = 0; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * finalPool.length);
+                result += finalPool.charAt(randomIndex);
+            }
+        }
+
+        document.getElementById('result').innerText = result;
+    }
+
+    window.onload = function() {
+        toggleLengthInput();
+        generateRandomString();
+    };
+</script>
+
+</body>
+</html>
