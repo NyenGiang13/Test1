@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chuyển đổi MIDI sang Nốt Nhạc</title>
+    <script src="https://unpkg.com/@tonejs/midi"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f5f7fb;
+            color: #333;
+        }
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .upload-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 2px dashed #3498db;
+            display: inline-block;
+            padding: 12px 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            color: #3498db;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .custom-file-upload:hover {
+            background: #3498db;
+            color: #fff;
+        }
+        #result {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .track-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+        .track-title {
+            font-weight: bold;
+            color: #e67e22;
+        }
+        .copy-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #27ae60;
+        }
+        .notes-container {
+            padding: 10px 0;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Chuyển Đổi File MIDI Sang Nốt Nhạc</h2>
+    
+    <div class="upload-section">
+        <label class="custom-file-upload">
+            <input type="file" id="midi-file" accept=".mid,.midi">
+            Chọn file MIDI của bạn
+        </label>
+        <p id="file-name" style="margin-top: 10px; color: #7f8c8d;"></p>
+    </div>
+
+    <div id="result">Các nốt nhạc sẽ hiển thị tại đây sau khi bạn tải file lên...</div>
+
+    <script>
+        document.getElementById('midi-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('file-name').textContent = `Đang xử lý: ${file.name}`;
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = "Đang phân tích dữ liệu...";
+
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                try {
+                    const midi = new Midi(event.target.result);
+                    let outputHTML = `<h3>Tên bài hát: ${midi.name || "Không rõ"}</h3>`;
+                    
+                    if (midi.tracks.length === 0) {
+                        resultDiv.innerHTML = "Không tìm thấy track nhạc nào trong file MIDI này.";
+                        return;
+                    }
+
+                    midi.tracks.forEach((track, index) => {
+                        if (track.notes.length > 0) {
+                            // Tạo chuỗi nốt nhạc thuần văn bản phục vụ sao chép
+                            const pureNotesString = track.notes.map(note => note.name).join(' ');
+                            
+                            // Định dạng hiển thị nốt kèm thời gian, cách nhau bằng khoảng trắng (không dùng mũi tên)
+                            const displayNotesString = track.notes.map(note => {
+                                return `${note.name} (${note.time.toFixed(2)}s)`;
+                            }).join(' ');
+                            
+                            // Đẩy dữ liệu ra giao diện
+                            outputHTML += `
+                                <div class="track-header">
+                                    <span class="track-title">Track ${index + 1}: ${track.name || "Unnamed Track"} (${track.notes.length} nốt)</span>
+                                    <button class="copy-btn" data-notes="${pureNotesString}" onclick="copyToClipboard(this)">Sao chép nốt</button>
+                                </div>
+                                <div class="notes-container">${displayNotesString}</div>
+                            `;
+                        }
+                    });
+
+                    resultDiv.innerHTML = outputHTML;
+
+                } catch (error) {
+                    console.error(error);
+                    resultDiv.innerHTML = "<span style='color: red;'>Có lỗi xảy ra khi đọc file MIDI. Vui lòng thử file khác.</span>";
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Hàm copy hoạt động trên mọi môi trường (kể cả file cục bộ)
+        function copyToClipboard(button) {
+            const textToCopy = button.getAttribute('data-notes');
+            
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const originalText = button.textContent;
+                    button.textContent = "Đã sao chép! ✓";
+                    button.style.backgroundColor = "#34495e";
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = "#2ecc71";
+                    }, 2000);
+                } else {
+                    alert("Không thể sao chép nốt.");
+                }
+            } catch (err) {
+                alert("Lỗi trình duyệt không hỗ trợ sao chép tự động.");
+            }
+
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>
