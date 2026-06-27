@@ -2,45 +2,49 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Piano Web App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Piano Studio Pro</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; }
-        #piano { display: flex; justify-content: center; margin-top: 20px; }
-        .key { width: 30px; height: 120px; border: 1px solid #000; cursor: pointer; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #f0f2f5; padding: 20px; touch-action: manipulation; }
+        #piano { display: flex; justify-content: center; margin-top: 20px; overflow-x: auto; padding-bottom: 20px; }
+        .key { width: 30px; height: 150px; border: 1px solid #999; cursor: pointer; transition: background 0.1s; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
         .white { background: white; }
-        .black { background: black; width: 20px; height: 80px; margin-left: -10px; margin-right: -10px; z-index: 2; }
-        #controls { margin-bottom: 20px; }
+        .black { background: #333; width: 22px; height: 100px; margin-left: -11px; margin-right: -11px; z-index: 2; border-radius: 0 0 3px 3px; }
+        .key:active { background: #ddd; }
+        #controls { margin: 20px; background: white; padding: 15px; border-radius: 10px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; background: #007bff; color: white; font-weight: bold; }
+        button:disabled { background: #ccc; }
+        #timer { font-size: 1.2em; margin: 10px; color: #555; }
     </style>
 </head>
 <body>
 
-    <h2>Piano Ghi Âm</h2>
+    <h2>🎹 Piano Web Studio</h2>
     <input type="file" id="audioUpload" accept="audio/*">
+    
     <div id="controls">
         <button id="recBtn">Ghi âm</button>
         <button id="stopBtn" disabled>Dừng</button>
+        <div id="timer">Thời gian: 0s</div>
     </div>
+
     <div id="piano"></div>
-    <div id="output" style="margin-top: 20px;"></div>
+    <div id="output"></div>
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let audioBuffer = null;
-        let mediaRecorder, chunks = [];
+        let audioBuffer = null, mediaRecorder, chunks = [], startTime, timerInterval;
         const dest = audioCtx.createMediaStreamDestination();
 
-        // 1. Tải file âm thanh
         document.getElementById('audioUpload').onchange = async (e) => {
             const file = e.target.files[0];
-            const arrayBuffer = await file.arrayBuffer();
-            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
+            alert("Đã tải âm thanh thành công!");
         };
 
-        // 2. Tạo bàn phím (A0-C8: 88 phím)
         const piano = document.getElementById('piano');
         for (let i = 0; i < 88; i++) {
             const key = document.createElement('div');
-            // Logic đơn giản để tô màu phím đen/trắng
             const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
             key.className = `key ${isBlack ? 'black' : 'white'}`;
             key.onclick = () => playSound(i);
@@ -48,42 +52,39 @@
         }
 
         function playSound(index) {
-            if (!audioBuffer) return alert("Hãy chọn tệp âm thanh trước!");
+            if (!audioBuffer) return alert("Vui lòng tải tệp âm thanh trước!");
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
             source.playbackRate.value = Math.pow(2, (index - 44) / 12);
             source.connect(audioCtx.destination);
-            source.connect(dest); // Kết nối vào stream ghi âm
+            source.connect(dest);
             source.start();
         }
 
-        // 3. Xử lý Ghi âm
-        const recBtn = document.getElementById('recBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        
         recBtn.onclick = () => {
             chunks = [];
             mediaRecorder = new MediaRecorder(dest.stream);
             mediaRecorder.ondataavailable = e => chunks.push(e.data);
             mediaRecorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'audio/webm' });
-                const url = URL.createObjectURL(blob);
                 document.getElementById('output').innerHTML = `
-                    <a href="${url}" download="ban_ghi_piano.webm">Tải xuống</a>
-                    <button onclick="this.parentElement.innerHTML=''">Xoá</button>
+                    <p><a href="${URL.createObjectURL(blob)}" download="piano_track.webm">📥 Tải bản ghi của bạn</a></p>
+                    <button onclick="this.parentElement.innerHTML=''">Xoá bản ghi</button>
                 `;
             };
             mediaRecorder.start();
-            recBtn.disabled = true;
-            stopBtn.disabled = false;
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                document.getElementById('timer').innerText = `Thời gian: ${Math.floor((Date.now() - startTime)/1000)}s`;
+            }, 1000);
+            recBtn.disabled = true; stopBtn.disabled = false;
         };
 
         stopBtn.onclick = () => {
             mediaRecorder.stop();
-            recBtn.disabled = false;
-            stopBtn.disabled = true;
+            clearInterval(timerInterval);
+            recBtn.disabled = false; stopBtn.disabled = true;
         };
     </script>
 </body>
-  </html>
-  
+</html>
