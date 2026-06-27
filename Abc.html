@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Piano Web App</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        #piano { display: flex; justify-content: center; margin-top: 20px; }
+        .key { width: 30px; height: 120px; border: 1px solid #000; cursor: pointer; }
+        .white { background: white; }
+        .black { background: black; width: 20px; height: 80px; margin-left: -10px; margin-right: -10px; z-index: 2; }
+        #controls { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>Piano Ghi Âm</h2>
+    <input type="file" id="audioUpload" accept="audio/*">
+    <div id="controls">
+        <button id="recBtn">Ghi âm</button>
+        <button id="stopBtn" disabled>Dừng</button>
+    </div>
+    <div id="piano"></div>
+    <div id="output" style="margin-top: 20px;"></div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioBuffer = null;
+        let mediaRecorder, chunks = [];
+        const dest = audioCtx.createMediaStreamDestination();
+
+        // 1. Tải file âm thanh
+        document.getElementById('audioUpload').onchange = async (e) => {
+            const file = e.target.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        };
+
+        // 2. Tạo bàn phím (A0-C8: 88 phím)
+        const piano = document.getElementById('piano');
+        for (let i = 0; i < 88; i++) {
+            const key = document.createElement('div');
+            // Logic đơn giản để tô màu phím đen/trắng
+            const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
+            key.className = `key ${isBlack ? 'black' : 'white'}`;
+            key.onclick = () => playSound(i);
+            piano.appendChild(key);
+        }
+
+        function playSound(index) {
+            if (!audioBuffer) return alert("Hãy chọn tệp âm thanh trước!");
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.playbackRate.value = Math.pow(2, (index - 44) / 12);
+            source.connect(audioCtx.destination);
+            source.connect(dest); // Kết nối vào stream ghi âm
+            source.start();
+        }
+
+        // 3. Xử lý Ghi âm
+        const recBtn = document.getElementById('recBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        recBtn.onclick = () => {
+            chunks = [];
+            mediaRecorder = new MediaRecorder(dest.stream);
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                document.getElementById('output').innerHTML = `
+                    <a href="${url}" download="ban_ghi_piano.webm">Tải xuống</a>
+                    <button onclick="this.parentElement.innerHTML=''">Xoá</button>
+                `;
+            };
+            mediaRecorder.start();
+            recBtn.disabled = true;
+            stopBtn.disabled = false;
+        };
+
+        stopBtn.onclick = () => {
+            mediaRecorder.stop();
+            recBtn.disabled = false;
+            stopBtn.disabled = true;
+        };
+    </script>
+</body>
+  </html>
+  
