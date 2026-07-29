@@ -35,7 +35,6 @@
             color: #e0e0e0;
         }
 
-        /* Thẻ chứa Script */
         .script-card {
             background-color: #1e1e1e;
             border: 1px solid #2d2d2d;
@@ -63,7 +62,6 @@
             line-height: 1.4;
         }
 
-        /* Nút Sao chép */
         .copy-btn {
             align-self: flex-start;
             background-color: #2c2c2c;
@@ -94,14 +92,10 @@
     <div class="container">
         <h2>Danh Sách Script (<span id="total-count">0</span>)</h2>
         
-        <!-- Khu vực này sẽ chứa các thẻ script được tạo tự động -->
         <div id="script-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
     </div>
 
     <script>
-        // ========================================================
-        // THÊM SCRIPT MỚI CỦA BẠN VÀO DANH SÁCH DƯỚI ĐÂY
-        // ========================================================
         const scripts = [
             {
                 title: "Try To Die Script",
@@ -125,7 +119,7 @@
             },
             {
                 title: "AntiAFK",
-                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/AntiAFK", true))()'
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/AntiAFK"'
             },
             {
                 title: "Fps boost",
@@ -133,20 +127,31 @@
             },
             {
                 title: "Freecam",
-                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Freecam", true))()'
-            }
-            // Bạn muốn thêm script mới thì chỉ cần phẩy (,) rồi thêm như sau:
-            /*
-            ,{
-                title: "Tên Script Mới",
-                code: 'Mã script của bạn ở đây'
-            }
-            */
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Freecam"'
+            },
+            {
+                title: "Be a lucky fish",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/yomama-sourch/fish/refs/heads/main/.lua"))()'
+            },
+            
+            {
+                title: "Don't press button 4",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/secret-way/DPTB4/refs/heads/main/main"))()'
+            },
+            {
+                title: "Kill aura survive zombie arena-hack key",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/survive%20zombie%20arena-by%20tora%20isme(hack%20key)"'
+            },
+            {
+                title: "Kill aura survive zombie arena",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Kill%20aura%20survive%20zombie%20arena-by%20me"'
+            },
+            {
+                title: "Wallhop panel",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/wallhop%20remake"'
+            },
         ];
 
-        // ========================================================
-        // HÀM TỰ ĐỘNG TẠO GIAO DIỆN HÀNG LOẠT
-        // ========================================================
         function renderScripts() {
             const listContainer = document.getElementById('script-list');
             document.getElementById('total-count').innerText = scripts.length;
@@ -160,7 +165,6 @@
             `).join('');
         }
 
-        // Hàm xử lý sao chép
         function copyScript(index, button) {
             const scriptText = scripts[index].code;
 
@@ -178,7 +182,6 @@
             });
         }
 
-        // Chuyển ký tự đặc biệt để tránh lỗi hiển thị HTML
         function escapeHtml(text) {
             return text
                 .replace(/&/g, "&amp;")
@@ -188,7 +191,6 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Chạy hàm tạo giao diện khi trang web tải xong
         renderScripts();
     </script>
 
