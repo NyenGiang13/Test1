@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chia Sẻ Script</title>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+
+        /* Thẻ chứa Script */
+        .script-card {
+            background-color: #1e1e1e;
+            border: 1px solid #2d2d2d;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .script-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .script-code {
+            font-family: monospace;
+            font-size: 12px;
+            color: #a0a0a0;
+            background-color: #121212;
+            padding: 8px 10px;
+            border-radius: 6px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        /* Nút Sao chép */
+        .copy-btn {
+            align-self: flex-start;
+            background-color: #2c2c2c;
+            color: #d0d0d0;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background-color: #383838;
+            color: #ffffff;
+        }
+
+        .copy-btn.copied {
+            background-color: #0d5c2e;
+            color: #4caf50;
+            border-color: #1b7a3e;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Danh Sách Script (<span id="total-count">0</span>)</h2>
+        
+        <!-- Khu vực này sẽ chứa các thẻ script được tạo tự động -->
+        <div id="script-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+
+    <script>
+        // ========================================================
+        // THÊM SCRIPT MỚI CỦA BẠN VÀO DANH SÁCH DƯỚI ĐÂY
+        // ========================================================
+        const scripts = [
+            {
+                title: "Try To Die Script",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/TryToDie"))()'
+            },
+            {
+                title: "A Quiet Place ESP",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/a%20quiet%20place"))()'
+            },
+            {
+                title: "Img",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/imglink-Fixing%20link"))()'
+            },
+            {
+                title: "Knockout",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Knockout"))()'
+            },
+            {
+                title: "Aimbot",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/parasopseys/Jarn/refs/heads/main/beef"))()'
+            },
+            {
+                title: "AntiAFK",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/AntiAFK", true))()'
+            },
+            {
+                title: "Fps boost",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Fps%20boost"))()'
+            },
+            {
+                title: "Freecam",
+                code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/NyenGiang13/Script/refs/heads/main/Freecam", true))()'
+            }
+            // Bạn muốn thêm script mới thì chỉ cần phẩy (,) rồi thêm như sau:
+            /*
+            ,{
+                title: "Tên Script Mới",
+                code: 'Mã script của bạn ở đây'
+            }
+            */
+        ];
+
+        // ========================================================
+        // HÀM TỰ ĐỘNG TẠO GIAO DIỆN HÀNG LOẠT
+        // ========================================================
+        function renderScripts() {
+            const listContainer = document.getElementById('script-list');
+            document.getElementById('total-count').innerText = scripts.length;
+
+            listContainer.innerHTML = scripts.map((item, index) => `
+                <div class="script-card">
+                    <div class="script-title">${item.title}</div>
+                    <div class="script-code" id="code-${index}">${escapeHtml(item.code)}</div>
+                    <button class="copy-btn" onclick="copyScript(${index}, this)">Script</button>
+                </div>
+            `).join('');
+        }
+
+        // Hàm xử lý sao chép
+        function copyScript(index, button) {
+            const scriptText = scripts[index].code;
+
+            navigator.clipboard.writeText(scriptText).then(() => {
+                const originalText = button.innerText;
+                button.innerText = "Đã sao chép!";
+                button.classList.add("copied");
+
+                setTimeout(() => {
+                    button.innerText = originalText;
+                    button.classList.remove("copied");
+                }, 2000);
+            }).catch(err => {
+                console.error("Lỗi khi sao chép: ", err);
+            });
+        }
+
+        // Chuyển ký tự đặc biệt để tránh lỗi hiển thị HTML
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Chạy hàm tạo giao diện khi trang web tải xong
+        renderScripts();
+    </script>
+
+</body>
+  </html>
+  
