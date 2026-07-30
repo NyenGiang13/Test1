@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Mã Hóa / Giải Mã Chuỗi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 680px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        
+        /* Mode Switcher */
+        .mode-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #0066cc;
+            background-color: #fff;
+            color: #0066cc;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mode-btn.active {
+            background-color: #0066cc;
+            color: #fff;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .config-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .config-item {
+            flex: 1;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            font-size: 15px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .results {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .result-item {
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+        .result-item strong {
+            color: #0066cc;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Công Cụ Mã Hóa & Giải Mã</h2>
+
+    <!-- Chuyển đổi chế độ -->
+    <div class="mode-container">
+        <button id="btnEncodeMode" class="mode-btn active" onclick="switchMode('encode')">MÃ HÓA</button>
+        <button id="btnDecodeMode" class="mode-btn" onclick="switchMode('decode')">GIẢI MÃ</button>
+    </div>
+    
+    <!-- Nhập văn bản -->
+    <div class="input-group">
+        <label id="lblInput" for="inputText">Nhập chuỗi cần mã hóa:</label>
+        <input type="text" id="inputText" placeholder="Gõ nội dung vào đây..." oninput="processAll()">
+    </div>
+
+    <!-- Chọn kiểu mã hóa (chỉ hiện ở chế độ Giải mã) -->
+    <div class="input-group hidden" id="algoSelectGroup">
+        <label for="algoSelect">Chọn kiểu mã hóa của chuỗi đầu vào:</label>
+        <select id="algoSelect" onchange="processAll()">
+            <option value="ALL">--- Tất cả (Thử tất cả dạng) ---</option>
+            <option value="Morse">Morse</option>
+            <option value="Binary">Binary</option>
+            <option value="Hex">Hex</option>
+            <option value="Base32">Base32</option>
+            <option value="Base64">Base64</option>
+            <option value="Base58">Base58</option>
+            <option value="Caesar">Caesar</option>
+            <option value="ROT13">ROT13</option>
+            <option value="Atbash">Atbash</option>
+            <option value="Vigenere">Vigenère</option>
+        </select>
+    </div>
+
+    <!-- Tùy chỉnh Key / Shift -->
+    <div class="config-group">
+        <div class="config-item">
+            <label for="caesarShift">Caesar Shift (Số):</label>
+            <input type="number" id="caesarShift" value="3" oninput="processAll()">
+        </div>
+        <div class="config-item">
+            <label for="vigenereKey">Vigenère Key (Chữ):</label>
+            <input type="text" id="vigenereKey" value="KEY" oninput="processAll()">
+        </div>
+    </div>
+
+    <!-- Khung kết quả -->
+    <div class="results">
+        <h3 id="lblResultHeader">--- KẾT QUẢ MÃ HÓA ---</h3>
+        
+        <div class="result-item" data-algo="Morse"><strong>Morse:</strong> <span id="outMorse"></span></div>
+        <div class="result-item" data-algo="Binary"><strong>Binary:</strong> <span id="outBinary"></span></div>
+        <div class="result-item" data-algo="Hex"><strong>Hex:</strong> <span id="outHex"></span></div>
+        <div class="result-item" data-algo="Base32"><strong>Base32:</strong> <span id="outBase32"></span></div>
+        <div class="result-item" data-algo="Base64"><strong>Base64:</strong> <span id="outBase64"></span></div>
+        <div class="result-item" data-algo="Base58"><strong>Base58:</strong> <span id="outBase58"></span></div>
+        <div class="result-item" data-algo="Caesar"><strong>Caesar (<span id="lblCaesarShift">3</span>):</strong> <span id="outCaesar"></span></div>
+        <div class="result-item" data-algo="ROT13"><strong>ROT13:</strong> <span id="outROT13"></span></div>
+        <div class="result-item" data-algo="Atbash"><strong>Atbash:</strong> <span id="outAtbash"></span></div>
+        <div class="result-item" data-algo="Vigenere"><strong>Vigenère (key '<span id="lblVigenereKey">KEY</span>'):</strong> <span id="outVigenere"></span></div>
+    </div>
+
+    <script>
+        let currentMode = 'encode'; // 'encode' hoặc 'decode'
+
+        // Map Morse Code
+        const MORSE_MAP = {'A':'.-', 'B':'-...', 'C':'-.-.', 'D':'-..', 'E':'.', 'F':'..-.', 'G':'--.', 'H':'....', 'I':'..', 'J':'.---', 'K':'-.-', 'L':'.-..', 'M':'--', 'N':'-.', 'O':'---', 'P':'.--.', 'Q':'--.-', 'R':'.-.', 'S':'...', 'T':'-', 'U':'..-', 'V':'...-', 'W':'.--', 'X':'-..-', 'Y':'-.--', 'Z':'--..', '1':'.----', '2':'..---', '3':'...--', '4':'....-', '5':'.....', '6':'-....', '7':'--...', '8':'---..', '9':'----.', '0':'-----', ' ':'/'};
+        const REVERSE_MORSE_MAP = Object.fromEntries(Object.entries(MORSE_MAP).map(([k, v]) => [v, k]));
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const btnEncode = document.getElementById('btnEncodeMode');
+            const btnDecode = document.getElementById('btnDecodeMode');
+            const algoSelectGroup = document.getElementById('algoSelectGroup');
+            const lblInput = document.getElementById('lblInput');
+            const lblResultHeader = document.getElementById('lblResultHeader');
+
+            if (mode === 'encode') {
+                btnEncode.classList.add('active');
+                btnDecode.classList.remove('active');
+                algoSelectGroup.classList.add('hidden');
+                lblInput.innerText = "Nhập chuỗi cần mã hóa:";
+                lblResultHeader.innerText = "--- KẾT QUẢ MÃ HÓA ---";
+            } else {
+                btnDecode.classList.add('active');
+                btnEncode.classList.remove('active');
+                algoSelectGroup.classList.remove('hidden');
+                lblInput.innerText = "Nhập chuỗi cần giải mã:";
+                lblResultHeader.innerText = "--- KẾT QUẢ GIẢI MÃ ---";
+            }
+            processAll();
+        }
+
+        // --- 1. MORSE ---
+        function morseEncode(text) {
+            return text.toUpperCase().split('').map(char => MORSE_MAP[char] || '').join(' ');
+        }
+        function morseDecode(text) {
+            return text.trim().split(' ').map(code => REVERSE_MORSE_MAP[code] || (code === '/' ? ' ' : '?')).join('');
+        }
+
+        // --- 2. CAESAR & ROT13 ---
+        function caesarCipher(text, shift = 3) {
+            shift = (parseInt(shift) % 26 + 26) % 26;
+            return text.split('').map(char => {
+                if (/[a-zA-Z]/.test(char)) {
+                    const start = char === char.toUpperCase() ? 65 : 97;
+                    return String.fromCharCode((char.charCodeAt(0) - start + shift) % 26 + start);
+                }
+                return char;
+            }).join('');
+        }
+
+        // --- 3. ATBASH ---
+        function atbashCipher(text) {
+            return text.split('').map(char => {
+                if (/[a-zA-Z]/.test(char)) {
+                    const start = char === char.toUpperCase() ? 65 : 97;
+                    return String.fromCharCode(start + (25 - (char.charCodeAt(0) - start)));
+                }
+                return char;
+            }).join('');
+        }
+
+        // --- 4. VIGENÈRE ---
+        function vigenereCipher(text, key = "KEY", decode = false) {
+            key = key.toUpperCase().replace(/[^A-Z]/g, '');
+            if (!key) return text;
+
+            let keyIndex = 0;
+            return text.split('').map(char => {
+                if (/[a-zA-Z]/.test(char)) {
+                    const start = char === char.toUpperCase() ? 65 : 97;
+                    let shift = key.charCodeAt(keyIndex % key.length) - 65;
+                    if (decode) shift = (26 - shift) % 26;
+                    keyIndex++;
+                    return String.fromCharCode((char.charCodeAt(0) - start + shift) % 26 + start);
+                }
+                return char;
+            }).join('');
+        }
+
+        // --- 5. BASE32 ---
+        function base32Encode(text) {
+            if (!text) return "";
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            const bytes = new TextEncoder().encode(text);
+            let bits = "";
+            let output = "";
+            for (let i = 0; i < bytes.length; i++) bits += bytes[i].toString(2).padStart(8, '0');
+            for (let i = 0; i < bits.length; i += 5) {
+                let chunk = bits.substr(i, 5);
+                if (chunk.length < 5) chunk = chunk.padEnd(5, '0');
+                output += alphabet[parseInt(chunk, 2)];
+            }
+            while (output.length % 8 !== 0) output += "=";
+            return output;
+        }
+
+        function base32Decode(input) {
+            try {
+                const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+                input = input.replace(/=+$/, '').toUpperCase();
+                let bits = "";
+                for (let i = 0; i < input.length; i++) {
+                    const val = alphabet.indexOf(input[i]);
+                    if (val === -1) return "[Lỗi dữ liệu Base32]";
+                    bits += val.toString(2).padStart(5, '0');
+                }
+                const bytes = [];
+                for (let i = 0; i + 8 <= bits.length; i += 8) {
+                    bytes.push(parseInt(bits.substr(i, 8), 2));
+                }
+                return new TextDecoder().decode(new Uint8Array(bytes));
+            } catch (e) {
+                return "[Lỗi dữ liệu Base32]";
+            }
+        }
+
+        // --- 6. BASE58 ---
+        const ALPHABET_B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        function base58Encode(text) {
+            if (!text) return "";
+            const bytes = new TextEncoder().encode(text);
+            let digits = [0];
+            for (let i = 0; i < bytes.length; i++) {
+                let carry = bytes[i];
+                for (let j = 0; j < digits.length; j++) {
+                    carry += digits[j] << 8;
+                    digits[j] = carry % 58;
+                    carry = (carry / 58) | 0;
+                }
+                while (carry > 0) {
+                    digits.push(carry % 58);
+                    carry = (carry / 58) | 0;
+                }
+            }
+            let string = '';
+            for (let k = 0; k < bytes.length && bytes[k] === 0; k++) string += ALPHABET_B58[0];
+            for (let q = digits.length - 1; q >= 0; q--) string += ALPHABET_B58[digits[q]];
+            return string;
+        }
+
+        function base58Decode(input) {
+            try {
+                if (!input) return "";
+                let bytes = [0];
+                for (let i = 0; i < input.length; i++) {
+                    let c = input[i];
+                    let value = ALPHABET_B58.indexOf(c);
+                    if (value === -1) return "[Lỗi dữ liệu Base58]";
+                    let carry = value;
+                    for (let j = 0; j < bytes.length; j++) {
+                        carry += bytes[j] * 58;
+                        bytes[j] = carry & 0xff;
+                        carry >>= 8;
+                    }
+                    while (carry > 0) {
+                        bytes.push(carry & 0xff);
+                        carry >>= 8;
+                    }
+                }
+                for (let k = 0; k < input.length && input[k] === ALPHABET_B58[0]; k++) bytes.push(0);
+                return new TextDecoder().decode(new Uint8Array(bytes.reverse()));
+            } catch (e) {
+                return "[Lỗi dữ liệu Base58]";
+            }
+        }
+
+        // --- BINARY & HEX HELPERS ---
+        function binaryDecode(text) {
+            try {
+                const cleanText = text.trim().split(/\s+/);
+                const bytes = cleanText.map(bin => parseInt(bin, 2));
+                return new TextDecoder().decode(new Uint8Array(bytes));
+            } catch (e) { return "[Lỗi dữ liệu Binary]"; }
+        }
+
+        function hexDecode(text) {
+            try {
+                const cleanText = text.replace(/\s+/g, '');
+                if (cleanText.length % 2 !== 0) return "[Độ dài Chuỗi Hex không hợp lệ]";
+                const bytes = [];
+                for (let i = 0; i < cleanText.length; i += 2) {
+                    bytes.push(parseInt(cleanText.substr(i, 2), 16));
+                }
+                return new TextDecoder().decode(new Uint8Array(bytes));
+            } catch (e) { return "[Lỗi dữ liệu Hex]"; }
+        }
+
+        function base64Decode(text) {
+            try {
+                return decodeURIComponent(escape(atob(text)));
+            } catch (e) { return "[Lỗi dữ liệu Base64]"; }
+        }
+
+        // --- HÀM XỬ LÝ CHÍNH ---
+        function processAll() {
+            const text = document.getElementById('inputText').value;
+            const shiftInput = document.getElementById('caesarShift').value;
+            const shiftVal = shiftInput !== "" ? parseInt(shiftInput) : 3;
+            const keyVal = document.getElementById('vigenereKey').value || "KEY";
+            const selectedAlgo = document.getElementById('algoSelect').value;
+
+            document.getElementById('lblCaesarShift').innerText = shiftVal;
+            document.getElementById('lblVigenereKey').innerText = keyVal;
+
+            // Ẩn/Hiện dòng kết quả dựa trên dropdown giải mã
+            const allItems = document.querySelectorAll('.result-item');
+            allItems.forEach(item => {
+                const algo = item.getAttribute('data-algo');
+                if (currentMode === 'decode' && selectedAlgo !== 'ALL' && selectedAlgo !== algo) {
+                    item.classList.add('hidden');
+                } else {
+                    item.classList.remove('hidden');
+                }
+            });
+
+            if (!text) {
+                document.querySelectorAll('.results span:not(#lblCaesarShift):not(#lblVigenereKey)').forEach(el => el.innerText = '');
+                return;
+            }
+
+            if (currentMode === 'encode') {
+                // Mode MÃ HÓA
+                const bytes = new TextEncoder().encode(text);
+                document.getElementById('outMorse').innerText = morseEncode(text);
+                document.getElementById('outBinary').innerText = Array.from(bytes).map(b => b.toString(2).padStart(8, '0')).join(' ');
+                document.getElementById('outHex').innerText = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                document.getElementById('outBase32').innerText = base32Encode(text);
+                document.getElementById('outBase64').innerText = btoa(unescape(encodeURIComponent(text)));
+                document.getElementById('outBase58').innerText = base58Encode(text);
+                document.getElementById('outCaesar').innerText = caesarCipher(text, shiftVal);
+                document.getElementById('outROT13').innerText = caesarCipher(text, 13);
+                document.getElementById('outAtbash').innerText = atbashCipher(text);
+                document.getElementById('outVigenere').innerText = vigenereCipher(text, keyVal, false);
+            } else {
+                // Mode GIẢI MÃ
+                document.getElementById('outMorse').innerText = morseDecode(text);
+                document.getElementById('outBinary').innerText = binaryDecode(text);
+                document.getElementById('outHex').innerText = hexDecode(text);
+                document.getElementById('outBase32').innerText = base32Decode(text);
+                document.getElementById('outBase64').innerText = base64Decode(text);
+                document.getElementById('outBase58').innerText = base58Decode(text);
+                document.getElementById('outCaesar').innerText = caesarCipher(text, -shiftVal);
+                document.getElementById('outROT13').innerText = caesarCipher(text, 13); // ROT13 tự giải mã chính nó
+                document.getElementById('outAtbash').innerText = atbashCipher(text); // Atbash tự giải mã chính nó
+                document.getElementById('outVigenere').innerText = vigenereCipher(text, keyVal, true);
+            }
+        }
+    </script>
+</body>
+</html>
