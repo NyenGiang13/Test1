@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Record - Video Converter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* UI overlay panels */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 0.8s ease;
+        }
+
+        .top-bar, .bot-bar {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background-color: #000;
+            z-index: 105;
+            transition: height 1.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .top-bar { top: 0; }
+        .bot-bar { bottom: 0; }
+        .bar-active { height: 9%; }
+
+        .text-line {
+            margin: 4px 0;
+            text-align: center;
+            color: #9b9b9b;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.1s ease, transform 1.1s ease;
+        }
+        .text-line.title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .text-line.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .btn-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 16px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.1s ease, transform 1.1s ease;
+        }
+        .btn-group.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        button, label.btn-label {
+            background: transparent;
+            border: 1px solid #555;
+            color: #787878;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.primary, label.btn-label.primary {
+            color: #fff;
+            border-color: #fff;
+        }
+        button:hover, label.btn-label:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Main Workspace */
+        #workspace {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        /* Square Video Display Container */
+        .viewport-container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+            background-color: #111;
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        video {
+            display: none;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            color: #c8c8c8;
+            font-size: 13px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+            z-index: 15;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top/Bottom Animated Cinematic Bars -->
+    <div id="topBar" class="top-bar"></div>
+    <div id="botBar" class="bot-bar"></div>
+
+    <!-- 1. WARNING SCREEN -->
+    <div id="warnScreen" class="overlay-screen">
+        <div class="text-line title">HEALTH & SAFETY WARNING</div>
+        <div class="text-line"></div>
+        <div class="text-line">THIS SCRIPT CONTAINS FLASHING LIGHTS</div>
+        <div class="text-line">AND RAPID VISUAL CHANGES,</div>
+        <div class="text-line">ANIMATED SCANLINES, AND SCREEN GLITCHES.</div>
+        <div class="text-line"></div>
+        <div class="text-line">THESE EFFECTS MAY AFFECT PEOPLE WITH</div>
+        <div class="text-line">PHOTOSENSITIVE CONDITIONS.</div>
+        <div class="text-line"></div>
+        <div class="text-line" style="font-size: 18px; color: #fff;">DO YOU WISH TO CONTINUE?</div>
+        
+        <div class="btn-group" id="warnBtns">
+            <button id="btnNo">NO — EXIT</button>
+            <button id="btnYes" class="primary">YES — CONTINUE</button>
+        </div>
+    </div>
+
+    <!-- 2. CONFIRM SCREEN -->
+    <div id="confScreen" class="overlay-screen" style="display: none; opacity: 0;">
+        <div class="text-line title">ARE YOU SURE?</div>
+        <div class="text-line"></div>
+        <div class="text-line">I CONFIRM I HAVE READ THE WARNING</div>
+        <div class="text-line">AND UNDERSTAND THE RISKS ASSOCIATED</div>
+        <div class="text-line">WITH THESE VISUAL EFFECTS.</div>
+        
+        <div class="btn-group" id="confBtns">
+            <button id="btnBack">← GO BACK</button>
+            <button id="btnConfirm" class="primary">✓ I UNDERSTAND</button>
+        </div>
+    </div>
+
+    <!-- 3. INTRO SCREEN -->
+    <div id="introScreen" class="overlay-screen" style="display: none; opacity: 0;">
+        <div class="text-line" style="font-size: 11px;">INSPIRED FROM RETRORASTER BY ETHANTHEGRAND14</div>
+        <div class="text-line"></div>
+        <div class="text-line title">Retro Record</div>
+        <div class="text-line">LUA BY GAZER_HA HTML BY NyenGiang13</div>
+        <div class="text-line"></div>
+        <div class="text-line">PROCESSING WORKSPACE...</div>
+    </div>
+
+    <!-- MAIN APP WORKSPACE -->
+    <div id="workspace">
+        <div class="controls">
+            <input type="file" id="videoInput" accept="video/*" style="display: none;">
+            <label for="videoInput" class="btn-label primary">IMPORT VIDEO</label>
+            <button id="btnRecord" class="primary" disabled>START RECORDING</button>
+            <button id="btnStop" disabled>STOP & SAVE</button>
+        </div>
+
+        <div class="viewport-container">
+            <!-- Low-res canvas for Retro Downscale -->
+            <canvas id="retroCanvas" width="90" height="90"></canvas>
+            <div class="watermark">RetroRecord<br><span style="font-size: 10px; color:#888;">gazer_ha</span></div>
+        </div>
+    </div>
+
+    <video id="sourceVideo" playsinline></video>
+
+    <script>
+        // --- ORIGINAL LUA CONFIGS CONVERTED TO JS ---
+        const DOWNSCALE = 5;
+        const RES_X = 90; // Low quality resolution square
+        const RES_Y = 90;
+        const FPS = 5;    // Fixed 5 FPS Export quality
+
+        // UI & Screen Elements
+        const warnScreen = document.getElementById('warnScreen');
+        const confScreen = document.getElementById('confScreen');
+        const introScreen = document.getElementById('introScreen');
+        const topBar = document.getElementById('topBar');
+        const botBar = document.getElementById('botBar');
+
+        const videoInput = document.getElementById('videoInput');
+        const sourceVideo = document.getElementById('sourceVideo');
+        const btnRecord = document.getElementById('btnRecord');
+        const btnStop = document.getElementById('btnStop');
+        const canvas = document.getElementById('retroCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Recording & State variables
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let startTime = 0;
+        let elapsedTime = 0;
+        let renderInterval = null;
+        let recBlink = true;
+        let blinkTimer = 0;
+
+        // Pixel Font Mapping from original Lua code
+        const PIXEL_FONT = {
+            "0": [14, 17, 17, 17, 17, 17, 14],
+            "1": [4, 12, 4, 4, 4, 4, 14],
+            "2": [14, 17, 1, 2, 4, 8, 31],
+            "3": [14, 1, 1, 6, 1, 1, 14],
+            "4": [17, 17, 17, 31, 1, 1, 1],
+            "5": [31, 16, 30, 1, 1, 17, 14],
+            "6": [14, 16, 16, 30, 17, 17, 14],
+            "7": [31, 1, 2, 4, 4, 4, 4],
+            "8": [14, 17, 17, 14, 17, 17, 14],
+            "9": [14, 17, 17, 15, 1, 1, 14],
+            "R": [30, 17, 17, 30, 20, 18, 17],
+            "E": [31, 16, 16, 30, 16, 16, 31],
+            "C": [14, 17, 16, 16, 16, 17, 14],
+            ":": [0, 4, 4, 0, 4, 4, 0]
+        };
+
+        // --- ANIMATION UI LOGIC ---
+        function showLines(container) {
+            topBar.classList.add('bar-active');
+            botBar.classList.add('bar-active');
+            const lines = container.querySelectorAll('.text-line');
+            const btns = container.querySelector('.btn-group');
+            
+            lines.forEach((line, idx) => {
+                setTimeout(() => line.classList.add('show'), idx * 250);
+            });
+            if (btns) {
+                setTimeout(() => btns.classList.add('show'), lines.length * 250);
+            }
+        }
+
+        function hideLines(container, callback) {
+            const lines = container.querySelectorAll('.text-line');
+            const btns = container.querySelector('.btn-group');
+            if (btns) btns.classList.remove('show');
+            lines.forEach(line => line.classList.remove('show'));
+            
+            setTimeout(() => {
+                if (callback) callback();
+            }, 800);
+        }
+
+        // Warning flow
+        showLines(warnScreen);
+
+        document.getElementById('btnNo').onclick = () => {
+            hideLines(warnScreen, () => {
+                topBar.classList.remove('bar-active');
+                botBar.classList.remove('bar-active');
+                warnScreen.innerHTML = "<div class='text-line show title'>EXITED</div>";
+            });
+        };
+
+        document.getElementById('btnYes').onclick = () => {
+            hideLines(warnScreen, () => {
+                warnScreen.style.display = 'none';
+                confScreen.style.display = 'flex';
+                setTimeout(() => {
+                    confScreen.style.opacity = '1';
+                    showLines(confScreen);
+                }, 50);
+            });
+        };
+
+        document.getElementById('btnBack').onclick = () => {
+            hideLines(confScreen, () => {
+                confScreen.style.display = 'none';
+                warnScreen.style.display = 'flex';
+                setTimeout(() => {
+                    warnScreen.style.opacity = '1';
+                    showLines(warnScreen);
+                }, 50);
+            });
+        };
+
+        document.getElementById('btnConfirm').onclick = () => {
+            hideLines(confScreen, () => {
+                confScreen.style.display = 'none';
+                introScreen.style.display = 'flex';
+                setTimeout(() => {
+                    introScreen.style.opacity = '1';
+                    showLines(introScreen);
+                    setTimeout(() => {
+                        hideLines(introScreen, () => {
+                            topBar.classList.remove('bar-active');
+                            botBar.classList.remove('bar-active');
+                            introScreen.style.display = 'none';
+                        });
+                    }, 2500);
+                }, 50);
+            });
+        };
+
+        // --- VIDEO IMPORT & RENDERING ---
+        videoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                sourceVideo.src = url;
+                sourceVideo.load();
+                btnRecord.disabled = false;
+            }
+        });
+
+        // Pixel Font Drawer
+        function drawPixelChar(char, ox, oy, color = '#ffffff') {
+            const rows = PIXEL_FONT[char];
+            if (!rows) return;
+            ctx.fillStyle = color;
+            for (let r = 0; r < 7; r++) {
+                let bits = rows[r];
+                for (let c = 0; c < 5; c++) {
+                    if ((bits >> (4 - c)) & 1) {
+                        ctx.fillRect(ox + c, oy + r, 1, 1);
+                    }
+                }
+            }
+        }
+
+        function drawPixelString(str, ox, oy, color = '#ffffff') {
+            let cx = ox;
+            for (let i = 0; i < str.length; i++) {
+                drawPixelChar(str[i], cx, oy, color);
+                cx += 6;
+            }
+        }
+
+        // Main Rendering Loop (Simulating Retro Camera)
+        function renderFrame() {
+            if (sourceVideo.paused || sourceVideo.ended) return;
+
+            // 1. Draw scaled down/blurred square video frame
+            const vWidth = sourceVideo.videoWidth;
+            const vHeight = sourceVideo.videoHeight;
+            const minDim = Math.min(vWidth, vHeight);
+            const sx = (vWidth - minDim) / 2;
+            const sy = (vHeight - minDim) / 2;
+
+            ctx.drawImage(sourceVideo, sx, sy, minDim, minDim, 0, 0, RES_X, RES_Y);
+
+            // 2. Scanline Effect
+            ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+            for (let y = 0; y < RES_Y; y += 2) {
+                ctx.fillRect(0, y, RES_X, 1);
+            }
+
+            // 3. Random Glitch Effect
+            if (Math.random() < 0.08) {
+                const gh = Math.floor(Math.random() * 6) + 1;
+                const gy = Math.floor(Math.random() * (RES_Y - gh));
+                const shift = Math.floor((Math.random() - 0.5) * 10);
+                const imgData = ctx.getImageData(0, gy, RES_X, gh);
+                ctx.putImageData(imgData, shift, gy);
+            }
+
+            // 4. Timer calculation (Only updates when video is playing)
+            elapsedTime = sourceVideo.currentTime;
+            const hrs = String(Math.floor(elapsedTime / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((elapsedTime % 3600) / 60)).padStart(2, '0');
+            const secs = String(Math.floor(elapsedTime % 60)).padStart(2, '0');
+            const timerStr = `${hrs}:${mins}:${secs}`;
+
+            // 5. HUD - Blinking REC Dot
+            blinkTimer += 1 / FPS;
+            if (blinkTimer >= 0.65) {
+                recBlink = !recBlink;
+                blinkTimer = 0;
+            }
+
+            if (recBlink) {
+                ctx.fillStyle = "#e61919";
+                ctx.beginPath();
+                ctx.arc(6, 6, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Top HUD Overlay
+            drawPixelString("REC", 11, 3, "#e6e6e6");
+            drawPixelString(timerStr, 3, 12, "#e6e6e6");
+
+            // Bottom Right Overlay - RED REC Label
+            ctx.fillStyle = "rgba(180, 20, 20, 0.8)";
+            ctx.fillRect(RES_X - 25, RES_Y - 11, 22, 9);
+            drawPixelString("REC", RES_X - 23, RES_Y - 10, "#ffffff");
+        }
+
+        // --- RECORDING & SAVING SYSTEM ---
+        btnRecord.onclick = () => {
+            recordedChunks = [];
+            
+            // Audio + Canvas Fusion Stream
+            const canvasStream = canvas.captureStream(FPS);
+            let combinedStream = canvasStream;
+
+            // Capture Audio if available from Video
+            if (sourceVideo.captureStream || sourceVideo.mozCaptureStream) {
+                const vidStream = sourceVideo.captureStream ? sourceVideo.captureStream() : sourceVideo.mozCaptureStream();
+                const audioTracks = vidStream.getAudioTracks();
+                if (audioTracks.length > 0) {
+                    combinedStream = new MediaStream([
+                        ...canvasStream.getVideoTracks(),
+                        audioTracks[0]
+                    ]);
+                }
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, {
+                mimeType: 'video/webm;codecs=vp8,opus'
+            });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = saveVideo;
+
+            // Start playing and recording
+            sourceVideo.currentTime = 0;
+            sourceVideo.play();
+            mediaRecorder.start();
+
+            isRecording = true;
+            btnRecord.disabled = true;
+            btnStop.disabled = false;
+            videoInput.disabled = true;
+
+            // Set render interval at 5 FPS
+            renderInterval = setInterval(renderFrame, 1000 / FPS);
+        };
+
+        btnStop.onclick = stopAndSave;
+
+        // Auto Stop & Save when video finishes playing
+        sourceVideo.onended = () => {
+            if (isRecording) {
+                stopAndSave();
+            }
+        };
+
+        function stopAndSave() {
+            if (!isRecording) return;
+            isRecording = false;
+
+            clearInterval(renderInterval);
+            sourceVideo.pause();
+            mediaRecorder.stop();
+
+            btnRecord.disabled = false;
+            btnStop.disabled = true;
+            videoInput.disabled = false;
+        }
+
+        function saveVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `RetroRecord_${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        }
+    </script>
+</body>
+</html>
