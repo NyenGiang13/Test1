@@ -151,6 +151,15 @@
         const MORSE_MAP = {'A':'.-', 'B':'-...', 'C':'-.-.', 'D':'-..', 'E':'.', 'F':'..-.', 'G':'--.', 'H':'....', 'I':'..', 'J':'.---', 'K':'-.-', 'L':'.-..', 'M':'--', 'N':'-.', 'O':'---', 'P':'.--.', 'Q':'--.-', 'R':'.-.', 'S':'...', 'T':'-', 'U':'..-', 'V':'...-', 'W':'.--', 'X':'-..-', 'Y':'-.--', 'Z':'--..', '1':'.----', '2':'..---', '3':'...--', '4':'....-', '5':'.....', '6':'-....', '7':'--...', '8':'---..', '9':'----.', '0':'-----', ' ':'/'};
         const REVERSE_MORSE_MAP = Object.fromEntries(Object.entries(MORSE_MAP).map(([k, v]) => [v, k]));
 
+        // Hàm xóa dấu tiếng Việt
+        function removeVietnameseTones(str) {
+            return str
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D');
+        }
+
         function switchMode(mode) {
             currentMode = mode;
             const btnEncode = document.getElementById('btnEncodeMode');
@@ -177,7 +186,8 @@
 
         // --- 1. MORSE ---
         function morseEncode(text) {
-            return text.toUpperCase().split('').map(char => MORSE_MAP[char] || '').join(' ');
+            const cleanText = removeVietnameseTones(text);
+            return cleanText.toUpperCase().split('').map(char => MORSE_MAP[char] || '').join(' ');
         }
         function morseDecode(text) {
             return text.trim().split(' ').map(code => REVERSE_MORSE_MAP[code] || (code === '/' ? ' ' : '?')).join('');
@@ -387,8 +397,8 @@
                 document.getElementById('outBase64').innerText = base64Decode(text);
                 document.getElementById('outBase58').innerText = base58Decode(text);
                 document.getElementById('outCaesar').innerText = caesarCipher(text, -shiftVal);
-                document.getElementById('outROT13').innerText = caesarCipher(text, 13); // ROT13 tự giải mã chính nó
-                document.getElementById('outAtbash').innerText = atbashCipher(text); // Atbash tự giải mã chính nó
+                document.getElementById('outROT13').innerText = caesarCipher(text, 13);
+                document.getElementById('outAtbash').innerText = atbashCipher(text);
                 document.getElementById('outVigenere').innerText = vigenereCipher(text, keyVal, true);
             }
         }
