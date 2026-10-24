@@ -124,18 +124,17 @@
 
                     midi.tracks.forEach((track, index) => {
                         if (track.notes.length > 0) {
-                            // Tạo chuỗi nốt nhạc thuần văn bản phục vụ sao chép
-                            const pureNotesString = track.notes.map(note => note.name).join(' ');
-                            
-                            // Định dạng hiển thị nốt kèm thời gian, cách nhau bằng khoảng trắng (không dùng mũi tên)
+                            // Chuỗi dùng để hiển thị và sao chép, bao gồm cả thời gian
                             const displayNotesString = track.notes.map(note => {
-                                return `${note.name} (${note.time.toFixed(2)}s)`;
+                            return `${note.name} (${note.time.toFixed(2)}s)`;
                             }).join(' ');
-                            
+
+                            // Sao chép cả tên nốt và thời gian
+                            const pureNotesString = displayNotesString;
                             // Đẩy dữ liệu ra giao diện
                             outputHTML += `
                                 <div class="track-header">
-                                    <span class="track-title">Track ${index + 1}: ${track.name || "Unnamed Track"} (${track.notes.length} nốt)</span>
+                                    <span class="track-title">Track ${index + 1}: ${track.name || "Track 1"} (${track.notes.length} nốt)</span>
                                     <button class="copy-btn" data-notes="${pureNotesString}" onclick="copyToClipboard(this)">Sao chép nốt</button>
                                 </div>
                                 <div class="notes-container">${displayNotesString}</div>
